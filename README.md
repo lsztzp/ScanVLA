@@ -8,6 +8,8 @@ the same ans [Sa2VA: Marrying SAM2 with LLaVA for Dense Grounded Understanding o
 
 or you can 
 ```bash
+conda create -n vlm python=3.10.16
+conda activate vlm
 pip install -r requirements.txt
 ```
 
@@ -20,6 +22,16 @@ For the four scenarios of Referential Expression, Image Caption, Object Category
 
 For the scenario of Zero-Shot Object Category Guided Scanpath Prediction, A cross-validation method is used to calculate the final metrics, so is contains 18 model weights. model weights are comming on the soon.
 
+At this point the project root should look like:
+ScanVLA/
+├── pretrained/
+│     └── model_qwen_2b.pth
+|     └── checkpoints/
+|     └── Qwen3-VL-2B-Instruct/
+└── projects/
+└── test_evaluation_metrics/
+└── tools/
+└── vlm/
 
 # Test
 test script under test_evaluation_metrics/test_metrics_AiR.py
