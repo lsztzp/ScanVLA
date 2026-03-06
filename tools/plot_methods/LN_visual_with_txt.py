@@ -23,8 +23,6 @@ def plot_scanpath_color(image_path, save_path, center_x, center_y, caption_utter
     # 创建渐变颜色
     num_points = len(center_x)
 
-    colors = plt.cm.viridis(np.linspace(0, 1, num_points))
-
     # 绘制图像
     plt.figure(figsize=(10, 10))
     ax = plt.gca()
@@ -50,13 +48,13 @@ def plot_scanpath_color(image_path, save_path, center_x, center_y, caption_utter
         # 绘制平滑轨迹（保持颜色渐变）
         for i in range(len(t_smooth) - 1):
             # 根据当前点在原始序列中的比例，获取对应颜色
-            color_ratio = t_smooth[i]
-            line_color = plt.cm.viridis(color_ratio)
+            color_ratio = 1 - t_smooth[i]
+            line_color = plt.cm.turbo(color_ratio)
             ax.plot(
                 [x_smooth[i], x_smooth[i+1]],
                 [y_smooth[i], y_smooth[i+1]],
                 color=line_color,
-                linewidth=2,
+                linewidth=3,
                 alpha=0.8
             )
 
@@ -69,15 +67,15 @@ def plot_scanpath_color(image_path, save_path, center_x, center_y, caption_utter
     #     )
 
     num_words = len(caption_utterance)
-    colors = plt.cm.viridis(np.linspace(0, 1, num_words))
+    colors = plt.cm.turbo(np.linspace(1, 0, num_words))
 
     # 在图像下方标注单词
     ax.set_position([0.1, 0.3, 0.8, 0.6])  # 调整图像位置以腾出下方空间
 
     x = 0.02  # 左侧留一点边距
-    y = -0.02
-    fontsize=12
-    line_height = 0.04
+    y = -0.035
+    fontsize=17
+    line_height = 0.046
     max_line_width =0.99
 
     fig = plt.gcf()
@@ -127,7 +125,7 @@ def plot_scanpath_color(image_path, save_path, center_x, center_y, caption_utter
             transform=ax.transAxes
         )
 
-        x += word_width_ax + 0.01
+        x += word_width_ax + 0.012
 
     ax.axis('off')
     # 保存图像
@@ -138,9 +136,9 @@ def plot_scanpath_color(image_path, save_path, center_x, center_y, caption_utter
 
 if __name__=="__main__":
     # path = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/ScanVLA_LN_infered.pt'
-    path = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/ScanVLA_LN_infered500.pt'
+    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_LN_infered500.pt'
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/coco/val2017/'
-    save_root = './tools/plot/visual_images/LN/Ours'
+    save_root = './tools/ploted_images/qualitative_compare_images/LN/Ours'
 
     scanpaths = torch.load(path)
 
@@ -158,7 +156,7 @@ if __name__=="__main__":
 
         new_filename = IMG_ID.zfill(12)
 
-        save_path = join(save_root, new_filename + '_' +str(cnt) + '.jpg')
+        save_path = join(save_root,  str(cnt) + '_' +  new_filename + '.jpg')
         cnt += 1
 
         if os.path.exists(save_path):

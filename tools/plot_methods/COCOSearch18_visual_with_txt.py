@@ -22,10 +22,6 @@ def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, 
     ax = plt.gca()
     plt.imshow(image)
     plt.axis("off")
-    # image = cv2.resize(matplotlib.image.imread(img_path), (img_width, img_height))
-
-    # fig, ax = plt.subplots()
-    # ax.imshow(image)
 
     ys = scanpaths[:,0]
     xs = scanpaths[:,1]
@@ -35,32 +31,27 @@ def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, 
     # min_T, max_T = np.min(ts), np.max(ts)
     # rad_per_T = (cir_rad_max - cir_rad_min) / float(max_T - min_T)
 
-    linewidth = 2
+    linewidth = 4
     for i in range(len(xs)):
         if i > 0:
-            plt.plot([xs[i], xs[i - 1]], [ys[i], ys[i - 1]], color='red',linewidth=linewidth, alpha=0.35)
+            plt.plot([xs[i], xs[i - 1]], [ys[i], ys[i - 1]], color='yellow',linewidth=linewidth, alpha=0.8)
 
     for i in range(len(xs)):
         # cir_rad = int(14 + rad_per_T * (ts[i] - min_T))
-        cir_rad = 10
+        cir_rad = 15
         circle = plt.Circle((xs[i], ys[i]),
                             radius=cir_rad,
-                            facecolor='yellow',
-                            alpha=0.5)
+                            facecolor='orange',
+                            alpha=0.8)
         ax.add_patch(circle)
         plt.annotate("{}".format(
-            i+1), xy=(xs[i], ys[i]+3), fontsize=10, ha="center", va="center")
-
-    # 在图像下方标注单词
-    # num_words = len(text)
-    # colors = plt.cm.viridis(np.linspace(0, 1, num_words))
-    
+            i+1), xy=(xs[i], ys[i]+3), fontsize=16, ha="center", va="center")
 
     ax.set_position([0.1, 0.3, 0.8, 0.6])  # 调整图像位置以腾出下方空间
 
-    x = 0.02  # 左侧留一点边距
-    y = -0.02
-    fontsize=12
+    x = 0.06  # 左侧留一点边距
+    y = -0.08
+    fontsize=40
     line_height = 0.04
     max_line_width =0.99
 
@@ -123,9 +114,9 @@ def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, 
 
 
 if __name__ == '__main__':
-    path = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/ScanVLA_COCOSearch18_infered.pt'
+    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_COCOSearch18_infered.pt'
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/coco_search18/raw/COCOSearch18/images/'
-    save_root = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/visual_images/COCOSearch18/Ours_with_txt'
+    save_root = './tools/ploted_images/qualitative_compare_images/COCOSearch18/Ours_with_txt'
 
     scanpaths = torch.load(path)
 
@@ -137,6 +128,8 @@ if __name__ == '__main__':
         image_path = join(image_root, task_name.replace(' ', '_'), name)
         save_path = join(save_root, task_name.replace(' ', '_'), name)
 
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
         if os.path.exists(save_path):
             continue
         parent_folder = Path(save_path).parent  
@@ -144,11 +137,7 @@ if __name__ == '__main__':
         if not parent_folder.is_dir():
             parent_folder.mkdir(parents=True, exist_ok=True)
 
-        # plot_scanpath(image_path,coordinate,save_path,320,512)
         text = [task_name]
         plot_scanpath(image_path,scanpath,save_path,320,512, text)
-
-    # save_path = "/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/imageid/COCOSearch18_ids.pt"
-    # torch.save(arr,save_path)
 
     print('done')

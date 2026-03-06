@@ -16,49 +16,39 @@ import matplotlib.cm as cm
 warnings.filterwarnings("ignore")
 
 def plot_scanpath(img_path,scanpaths,save_path="", question="", img_height=320,img_width=512):
-    # image = cv2.resize(matplotlib.image.imread(img_path), (img_width, img_height))
-
     image = Image.open(image_path).convert("RGB")
     width, height = image.size
 
     ys = scanpaths[:,0] * height
     xs = scanpaths[:,1] * width
-    # fig, ax = plt.subplots()
-    # ax.imshow(image)
 
     plt.figure(figsize=(10, 10))
     ax = plt.gca()
     plt.imshow(image)
     plt.axis("off")
 
-    linewidth = 2
+    linewidth = 4
     for i in range(len(xs)):
         if i > 0:
-            plt.plot([xs[i], xs[i - 1]], [ys[i], ys[i - 1]], color='red',linewidth=linewidth, alpha=0.35)
+            plt.plot([xs[i], xs[i - 1]], [ys[i], ys[i - 1]], color='yellow',linewidth=linewidth, alpha=0.8)
 
     for i in range(len(xs)):
         # cir_rad = int(14 + rad_per_T * (ts[i] - min_T))
-        cir_rad = 10
+        cir_rad = 15
         circle = plt.Circle((xs[i], ys[i]),
                             radius=cir_rad,
-                            facecolor='yellow',
-                            alpha=0.5)
+                            facecolor='orange',
+                            alpha=0.8)
         ax.add_patch(circle)
         plt.annotate("{}".format(
-            i+1), xy=(xs[i], ys[i]+3), fontsize=10, ha="center", va="center")
-
-    # ax.axis('off')
-
-    # 在图像下方标注单词
-    num_words = len(question)
-    colors = plt.cm.viridis(np.linspace(0, 1, num_words))
+            i+1), xy=(xs[i], ys[i]+3), fontsize=16, ha="center", va="center")
     
     ax.set_position([0.1, 0.3, 0.8, 0.6])  # 调整图像位置以腾出下方空间
 
     x = 0.02  # 左侧留一点边距
-    y = -0.02
-    fontsize=12
-    line_height = 0.04
+    y = -0.04
+    fontsize=18
+    line_height = 0.052
     max_line_width =0.99
 
     fig = plt.gcf()
@@ -103,30 +93,22 @@ def plot_scanpath(img_path,scanpaths,save_path="", question="", img_height=320,i
         ax.text(
             x, y, word,
             fontsize=fontsize,
-            color=colors[i],
             ha='left', va='center',
             transform=ax.transAxes
         )
 
-        x += word_width_ax + 0.01
+        x += word_width_ax + 0.014
 
     ax.axis('off')
     # 保存图像
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
 
     plt.close()
-    # if not save_path:
-    #     plt.show()
-    # else:
-    #     plt.savefig(str(save_path), bbox_inches='tight', pad_inches=-0.1, dpi=2000)
-
-    # plt.cla()
-
 
 if __name__ == '__main__':
-    path = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/ScanVLA_AiR_infered.pt'
+    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_AiR_infered.pt'
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/AiR/stimuli/'
-    save_root = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/visual_images/AiR/Ours'
+    save_root = './tools/ploted_images/qualitative_compare_images/AiR/Ours_with_txt'
 
     scanpaths = torch.load(path)
 
@@ -134,6 +116,7 @@ if __name__ == '__main__':
         image_path = join(image_root, img_name)
         save_path = join(save_root, img_name)
 
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         if os.path.exists(save_path):
             continue
         parent_folder = Path(save_path).parent  
@@ -142,8 +125,6 @@ if __name__ == '__main__':
             parent_folder.mkdir(parents=True, exist_ok=True)
 
         question = question.split(' ')
-        # plot_scanpath(image_path,coordinate,save_path,320,512)
         plot_scanpath(image_path,scanpath,save_path, question,320,512)
-
 
     print('done')

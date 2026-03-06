@@ -17,15 +17,9 @@ def plot_scanpath(img_path, xs, ys, save_path="",img_height=320,img_width=512, b
     plt.imshow(image)
     plt.axis("off")
 
-    # image = cv2.resize(matplotlib.image.imread(img_path), (img_width, img_height))
+    linewidth = 4 #轨迹的粗细
 
-    # fig, ax = plt.subplots()
-    # ax.imshow(image)
-
-    linewidth = 2
-    # colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FFA500', '#FF00FF', '#FFC0CB', '#808080', '#5C3317', '#B0C4DE', '#87CEEB', '#FFB6C1', '#000000']
-    
-    colors = ['red', 'Green', 'Blue', 'Purple', 'Orange', 'Gray', 'pink', 'Olive', 'aqua', 'Navy', 'OrangeRed', 'Crimson', 'Magenta', 'SlateBlue', 'Gold' ]
+    colors = ['red', 'Purple', 'Green', 'Blue', 'Orange', 'Gray', 'pink', 'Olive', 'aqua', 'Navy', 'OrangeRed', 'Crimson', 'Magenta', 'SlateBlue', 'Gold' ]
     # colors = ['#FF0000', '#00FFFF', '#FFC0CB', '#008000', '#0000FF', '#800080', '#FFA500', '#808080', '#808000', '#000080', '#FF4500', '#DC143C', '#FF00FF', '#6A5ACD', '#FFD700']
 
     x, y, width, height = bbox
@@ -45,38 +39,34 @@ def plot_scanpath(img_path, xs, ys, save_path="",img_height=320,img_width=512, b
         for j in range(len(xs[i])):
             if j > 0:
                 # plt.plot([xs[i], xs[i - 1]], [ys[i], ys[i - 1]], color='red',linewidth=linewidth, alpha=0.35)
-                plt.plot([xs[i][j], xs[i][j-1]], [ys[i][j], ys[i][j-1]], color='yellow',linewidth=linewidth, alpha=0.4)
+                plt.plot([xs[i][j], xs[i][j-1]], [ys[i][j], ys[i][j-1]], color='yellow',linewidth=linewidth, alpha=0.8)
 
         if i > 0 and xs[i]:
-            plt.plot([xs[i][0], last_x], [ys[i][0], last_y], color='yellow',linewidth=linewidth, alpha=0.4)
+            plt.plot([xs[i][0], last_x], [ys[i][0], last_y], color='yellow',linewidth=linewidth, alpha=0.8)
 
         for j in range(len(xs[i])):
-            # cir_rad = int(14 + rad_per_T * (ts[i] - min_T))
-            cir_rad = 14
+            cir_rad = 15
             circle = plt.Circle((xs[i][j], ys[i][j]),
                             radius=cir_rad,
                             facecolor=color,
-                            alpha=0.75,
+                            alpha=0.8,
                             edgecolor='grey',     # 边框色（默认黑色，可自定义）
                             linewidth=1,         # 边框宽度（单位：点，1pt≈0.35mm）
                             )
             ax.add_patch(circle)
             plt.annotate("{}".format(
-                cnt), xy=(xs[i][j], ys[i][j]), fontsize=10, ha="center", va="center")
+                cnt), xy=(xs[i][j], ys[i][j]), fontsize=16, ha="center", va="center")
             last_x, last_y = xs[i][j], ys[i][j]
             cnt += 1
 
 
     # 在图像下方标注单词
-    # num_words = len(text)
-    # colors = plt.cm.viridis(np.linspace(0, 1, num_words))
-    
     ax.set_position([0.1, 0.3, 0.8, 0.6])  # 调整图像位置以腾出下方空间
 
     x = 0.02  # 左侧留一点边距
-    y = -0.02
-    fontsize=12
-    line_height = 0.04
+    y = -0.05
+    fontsize=25
+    line_height = 0.08
     max_line_width =0.99
 
     fig = plt.gcf()
@@ -126,25 +116,17 @@ def plot_scanpath(img_path, xs, ys, save_path="",img_height=320,img_width=512, b
             transform=ax.transAxes
         )
 
-        x += word_width_ax + 0.01
+        x += word_width_ax + 0.02
 
     ax.axis('off')
     plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
     plt.close()
-    # if not save_path:
-    #     plt.show(bbox_inches='tight', pad_inches=-0.1)
-    # else:
-    #     parent_dir = os.path.dirname(save_path)
-    #     if not os.path.exists(parent_dir):
-    #         os.makedirs(parent_dir)
-    #     plt.savefig(str(save_path), bbox_inches='tight', pad_inches=-0.1, dpi=2000)
-    # plt.cla()
 
 
 if __name__=='__main__':
-    path = 'tools/plot/ScanVLA_RefCOCOGaze_infered.pt'
+    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_RefCOCOGaze_infered.pt'
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/ART_data/data/images_512X320/'
-    save_root = '/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/plot/visual_images/RefCOCOGaze/Ours_with_text'
+    save_root = './tools/ploted_images/qualitative_compare_images/RefCOCOGaze/Ours_with_text'
 
     scanpaths = torch.load(path)
 
@@ -152,15 +134,14 @@ if __name__=='__main__':
     cnt = 0
     for elem in scanpaths:
         image_path = elem['IMAGEFILE']
-        # img_id = int(image_path.split('.')[0])
-        # a.append(img_id)
 
         X,Y = elem['X'],elem['Y']
         bbox = elem['BBOX']
         text = elem['TEXT']
 
-        # save_path = save_root + image_path.split('.')[0] + '_' + str(cnt) +'.jpg'
         save_path = os.path.join(save_root, image_path)
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        
         if os.path.exists(save_path):
             continue
         cnt+=1
@@ -170,8 +151,6 @@ if __name__=='__main__':
         text[0], text[-1] = '[BOT]', '[EOT]'
         plot_scanpath(image_root + image_path, xs= X, ys = Y, bbox=bbox, save_path=save_path, text=text)
         print(image_path)
-    # save_path = "/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/tools/imageid/RefCOCOGaze_ids.pt"
-    # torch.save(a,save_path)
 
     print('done')
 
