@@ -22,14 +22,14 @@ import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(project_root)
 
-from projects.ScanVLA_RefCOCOGaze.metrics.eval_metrics import get_metrics
-from projects.ScanVLA_RefCOCOGaze.datasets.ScanVLA_RefCOCOGaze import pos_to_fixation
+from projects.ScanVLA_RefCOCOGaze_Ablation.metrics.eval_metrics import get_metrics
+from projects.ScanVLA_RefCOCOGaze_Ablation.datasets.ScanVLA_RefCOCOGaze import pos_to_fixation
 
 def parse_args():
     parser = argparse.ArgumentParser(description='toHF script')   
-    parser.add_argument('--config', default='projects/ScanVLA_RefCOCOGaze/configs/ScanVLA_RefCOCOGaze.py', help='config file name or path.')    
+    parser.add_argument('--config', default='projects/ScanVLA_RefCOCOGaze_Ablation/configs/ScanVLA_RefCOCOGaze_Baseline.py', help='config file name or path.')    
 
-    parser.add_argument('--pthmodel',default='pretrained/checkpoints/RefCOCOGaze_SS_0408.pth', help='pth model file')
+    parser.add_argument('--pthmodel',default='work_dirs/ScanVLA_RefCOCOGaze_wo_txt_loss/iter_51072.pth', help='pth model file')
 
     parser.add_argument('--img_dir', type=str, default='/data/lyt/01-Datasets/01-ScanPath-Datasets/ART_data/data/images_512X320/', help='save folder name')
     
@@ -53,6 +53,8 @@ if __name__ == "__main__":
     model.mllm.transfer_to_hf = True
     model = model.eval().cuda()
 
+    # total, trainable, non_trainable = count_model_params(model)
+
     # tokenizer_path="/data/lyt/03-Repositories/02-others/03-MultiModality/Qwen3-VL-2B-Instruct"
     # tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     tokenizer = model.tokenizer
@@ -68,6 +70,7 @@ if __name__ == "__main__":
 
     # 轨迹生成
     res = []
+    # start_time = time.time()
     for ref in tqdm(test_refs):
         input_dict = {}
 
@@ -124,7 +127,16 @@ if __name__ == "__main__":
             }
 
         with torch.no_grad():
+            # flops, params = profile(model.mllm, inputs=(mm_inputs, None, 'loss'))
+
+            # # 转换成 TOPS 相关单位
+            # GFLOPs = flops / 1e9
+            # TOPs   = flops / 1e12   # 1 T = 10¹²
+
+            # print(f"GFLOPs: {GFLOPs:.2f}")
+            # print(f"TOPs:   {TOPs:.4f}")
             generate_output = model.mllm(mm_inputs, None, 'loss')
+        # break
 
         input_ids = mm_inputs['input_ids']
         hidden_states = generate_output.hidden_states
@@ -155,15 +167,15 @@ if __name__ == "__main__":
         token_predict = token_predict.unsqueeze(dim=0).permute(0,2,1,3) #前面的1代表bs=1
         token_states = torch.argmax(token_predict, dim=-1)
 
-        x_mu = model.activation(x_mu)  #(B,L,4) #这里使用的时sigmoid作为激活函数，相比于relu更加合理
+        x_mu = model.activation(x_mu)  #(B,L,4)
         y_mu = model.activation(y_mu)  #(B,L,4)
-        x_mu = x_mu * 512 
+        x_mu = x_mu * 512
         y_mu = y_mu * 320
-
+        
         ref_offset_mask = ref_offset_mask.unsqueeze(0)
         scanpaths_x = x_mu * ref_offset_mask.unsqueeze(-1).expand_as(x_mu)
-        scanpaths_y = y_mu * ref_offset_mask.unsqueeze(-1).expand_as(y_mu)  
-
+        scanpaths_y = y_mu * ref_offset_mask.unsqueeze(-1).expand_as(y_mu)
+        
         a,b = [],[]
         for i in range(scanpaths_x.shape[0]):
             word_valid_length = ref_offset_mask[i].sum()
@@ -181,6 +193,13 @@ if __name__ == "__main__":
                 a.append(tmp_x)
                 b.append(tmp_y)
         res.append({'REF_ID': ref['REF_ID'], 'X': a, 'Y': b , 'TERMINATIONS': -1, 'REPEAT_ID': 0})
+
+    # end_time = time.time()
+    # elapsed_time = end_time - start_time  # 单位：秒
+    
+    # 6. 格式化输出
+    # print(f"单次推理耗时：{elapsed_time:.6f} 秒")
+    # print(f"单次推理耗时：{elapsed_time*1000:.2f} 毫秒")
 
     score = get_metrics(res)
     print(score)

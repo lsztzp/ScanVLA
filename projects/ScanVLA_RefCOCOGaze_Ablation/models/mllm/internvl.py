@@ -42,6 +42,7 @@ class InternVLMLLM(InternVL_V1_5):
             freeze_llm=freeze_llm,
             freeze_visual_encoder=freeze_visual_encoder,
             llm_lora=None, # override the lora config
+            # llm_lora=llm_lora, # override the lora config
             visual_encoder_lora=None, # override the lora config
             quantization_vit=quantization_vit,
             quantization_llm=quantization_llm,
@@ -167,10 +168,10 @@ class InternVLMLLM(InternVL_V1_5):
         input_embeds = input_embeds.reshape(B * N, C)
 
 
-        if torch.distributed.get_rank() == 0 and self._count % 100 == 0:
-            print(f'dynamic ViT batch size: {vit_batch_size}, '
-                  f'images per sample: {vit_batch_size / B}, '
-                  f'dynamic token length: {N}')
+        # if torch.distributed.get_rank() == 0 and self._count % 100 == 0:
+        #     print(f'dynamic ViT batch size: {vit_batch_size}, '
+        #           f'images per sample: {vit_batch_size / B}, '
+        #           f'dynamic token length: {N}')
         self._count += 1
 
         # Process visual prompts if available

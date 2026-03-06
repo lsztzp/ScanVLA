@@ -16,20 +16,77 @@ import numpy as np
 import time
 from thop import profile
 
+
 # 将根目录加入sys.path
 import os 
 import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(project_root)
 
-from projects.ScanVLA_RefCOCOGaze.metrics.eval_metrics import get_metrics
-from projects.ScanVLA_RefCOCOGaze.datasets.ScanVLA_RefCOCOGaze import pos_to_fixation
+from projects.ScanVLA_RefCOCOGaze_Ablation.metrics.eval_metrics import get_metrics
+from projects.ScanVLA_RefCOCOGaze_Ablation.datasets.ScanVLA_RefCOCOGaze import pos_to_fixation
+
+def count_model_params(model: torch.nn.Module, print_detail: bool = True):
+    """
+    统计模型参数量
+    Args:
+        model: PyTorch模型实例
+        print_detail: 是否打印详细信息（每层参数）
+    Returns:
+        total_params: 总参数量（int）
+        trainable_params: 可训练参数量（int）
+        non_trainable_params: 不可训练参数量（int）
+    """
+    # 初始化统计变量
+    total_params = 0
+    trainable_params = 0
+    non_trainable_params = 0
+
+    if print_detail:
+        print("="*50)
+        print("Layer name | Param shape | Param num | Trainable")
+        print("="*50)
+
+    # 遍历模型所有参数
+    for name, param in model.named_parameters():
+        # 计算当前层参数数量
+        param_num = np.prod(param.size())  # 乘积计算总元素数
+        total_params += param_num
+        
+        # 判断是否可训练
+        if param.requires_grad:
+            trainable_params += param_num
+        else:
+            non_trainable_params += param_num
+
+        # 打印每层详情
+        if print_detail:
+            print(f"{name:<12} | {str(param.size()):<12} | {param_num:<8} | {param.requires_grad}")
+
+    # 格式化输出（转换为M/B，更易读）
+    def format_num(num):
+        if num >= 1e9:
+            return f"{num/1e9:.2f} B"
+        elif num >= 1e6:
+            return f"{num/1e6:.2f} M"
+        elif num >= 1e3:
+            return f"{num/1e3:.2f} K"
+        else:
+            return f"{num} "
+
+    print("\n" + "="*50)
+    print(f"Total params: {format_num(total_params)} ({total_params:,})")
+    print(f"Trainable params: {format_num(trainable_params)} ({trainable_params:,})")
+    print(f"Non-trainable params: {format_num(non_trainable_params)} ({non_trainable_params:,})")
+    print("="*50)
+
+    return total_params, trainable_params, non_trainable_params
 
 def parse_args():
     parser = argparse.ArgumentParser(description='toHF script')   
-    parser.add_argument('--config', default='projects/ScanVLA_RefCOCOGaze/configs/ScanVLA_RefCOCOGaze.py', help='config file name or path.')    
+    parser.add_argument('--config', default='projects/ScanVLA_RefCOCOGaze_Ablation/configs/ScanVLA_RefCOCOGaze_internvl3_2b.py', help='config file name or path.')    
 
-    parser.add_argument('--pthmodel',default='pretrained/checkpoints/RefCOCOGaze_SS_0408.pth', help='pth model file')
+    parser.add_argument('--pthmodel',default='work_dirs/ScanVLA_RefCOCOGaze_internvl3_2b/iter_51072.pth', help='pth model file')
 
     parser.add_argument('--img_dir', type=str, default='/data/lyt/01-Datasets/01-ScanPath-Datasets/ART_data/data/images_512X320/', help='save folder name')
     
@@ -53,6 +110,8 @@ if __name__ == "__main__":
     model.mllm.transfer_to_hf = True
     model = model.eval().cuda()
 
+    total, trainable, non_trainable = count_model_params(model)
+
     # tokenizer_path="/data/lyt/03-Repositories/02-others/03-MultiModality/Qwen3-VL-2B-Instruct"
     # tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
     tokenizer = model.tokenizer
@@ -67,7 +126,9 @@ if __name__ == "__main__":
             test_refs.append({'REF_ID': case['REF_ID'], 'IMAGEFILE': case['IMAGEFILE'], 'REF_WORDS': case['REF_WORDS'], 'REF_SENTENCE': case['REF_SENTENCE']})
 
     # 轨迹生成
+
     res = []
+    start_time = time.time()
     for ref in tqdm(test_refs):
         input_dict = {}
 
@@ -113,7 +174,7 @@ if __name__ == "__main__":
         mm_inputs = {
                 'pixel_values': [input_dict['pixel_values'].cuda()],
                 'g_pixel_values': [input_dict['g_pixel_values'].cuda()],
-                'image_grid_thw': [input_dict['image_grid_thw'].cuda()],
+                # 'image_grid_thw': [input_dict['image_grid_thw'].cuda()],
                 'input_ids': ids.cuda(),
                 'attention_mask': attention_mask.cuda(),
                 'position_ids': position_ids.cuda(),
@@ -124,7 +185,16 @@ if __name__ == "__main__":
             }
 
         with torch.no_grad():
-            generate_output = model.mllm(mm_inputs, None, 'loss')
+            flops, params = profile(model.mllm, inputs=(mm_inputs, None, 'loss'))
+
+            # 转换成 TOPS 相关单位
+            GFLOPs = flops / 1e9
+            TOPs   = flops / 1e12   # 1 T = 10¹²
+
+            print(f"GFLOPs: {GFLOPs:.2f}")
+            print(f"TOPs:   {TOPs:.4f}")
+            # generate_output = model.mllm(mm_inputs, None, 'loss')
+        break
 
         input_ids = mm_inputs['input_ids']
         hidden_states = generate_output.hidden_states
@@ -155,14 +225,14 @@ if __name__ == "__main__":
         token_predict = token_predict.unsqueeze(dim=0).permute(0,2,1,3) #前面的1代表bs=1
         token_states = torch.argmax(token_predict, dim=-1)
 
-        x_mu = model.activation(x_mu)  #(B,L,4) #这里使用的时sigmoid作为激活函数，相比于relu更加合理
+        x_mu = model.activation(x_mu)  #(B,L,4)
         y_mu = model.activation(y_mu)  #(B,L,4)
-        x_mu = x_mu * 512 
+        x_mu = x_mu * 512
         y_mu = y_mu * 320
-
+        
         ref_offset_mask = ref_offset_mask.unsqueeze(0)
         scanpaths_x = x_mu * ref_offset_mask.unsqueeze(-1).expand_as(x_mu)
-        scanpaths_y = y_mu * ref_offset_mask.unsqueeze(-1).expand_as(y_mu)  
+        scanpaths_y = y_mu * ref_offset_mask.unsqueeze(-1).expand_as(y_mu)        
 
         a,b = [],[]
         for i in range(scanpaths_x.shape[0]):
@@ -182,6 +252,13 @@ if __name__ == "__main__":
                 b.append(tmp_y)
         res.append({'REF_ID': ref['REF_ID'], 'X': a, 'Y': b , 'TERMINATIONS': -1, 'REPEAT_ID': 0})
 
-    score = get_metrics(res)
-    print(score)
+    end_time = time.time()
+    elapsed_time = end_time - start_time  # 单位：秒
+    
+    # 6. 格式化输出
+    print(f"单次推理耗时：{elapsed_time:.6f} 秒")
+    print(f"单次推理耗时：{elapsed_time*1000:.2f} 毫秒")
+    
+    # score = get_metrics(res)
+    # print(score)
     print('done')

@@ -24,7 +24,6 @@ from projects.ScanVLA_RefCOCOGaze_Ablation.models.ScanVLA_decoder import Transfo
 #######################################################################
 # Model
 path = 'pretrained/Qwen3-VL-4B-Instruct'
-# pretrained_pth = None
 pretrained_pth = 'pretrained/model_qwen_4b.pth'
 
 # Data
@@ -39,7 +38,7 @@ batch_size = 1  # per_device
 accumulative_counts = 64
 dataloader_num_workers = 64
 
-max_epochs = 8
+max_epochs = 6
 
 optim_type = AdamW
 # official 1024 -> 4e-5
@@ -78,14 +77,17 @@ model = dict(
     decoder=dict(
         type=TransformerDecoderWrapper,
         activation="relu",
-        hidden_dim=256,
+        # hidden_dim=256,
+        # nhead=8,
+        # dim_feedforward=1024,
+        hidden_dim=512,
         nhead=8,
-        dim_feedforward=1024,
+        dim_feedforward=2048,
         dropout_attn = 0.1,
         dropout_mlp = 0.15,
         num_decoder_layers=6,
         max_len=4,
-        input_dim=2560,
+        input_dim=2560, # qwen3vl的内部维度
         args=None,
     ),
     mllm=dict(
@@ -95,10 +97,10 @@ model = dict(
         freeze_visual_encoder=True,
         llm_lora=dict(
             type=LoraConfig,
-            # r=128,
-            # lora_alpha=256,
-            r=16,
-            lora_alpha=32,
+            r=192,
+            lora_alpha=384,
+            # r=64,
+            # lora_alpha=128,
             lora_dropout=0.05,
             bias='none',
             task_type='CAUSAL_LM',

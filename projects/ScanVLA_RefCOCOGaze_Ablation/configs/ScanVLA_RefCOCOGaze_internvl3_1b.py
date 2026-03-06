@@ -12,9 +12,9 @@ from peft import LoraConfig
 
 from torch.nn import L1Loss, NLLLoss
 from mmengine.visualization import Visualizer, TensorboardVisBackend
-from projects.ScanVLA_RefCOCOGaze_Ablation.models.mllm.qwen3vl import Qwen3VL
+# from projects.ScanVLA_RefCOCOGaze_Ablation.models.mllm.qwen3vl import Qwen3VL
 
-from projects.ScanVLA_RefCOCOGaze_Ablation.models import ScanVLAModel, DirectResize
+from projects.ScanVLA_RefCOCOGaze_Ablation.models import ScanVLAModel, DirectResize, InternVLMLLM
 from projects.ScanVLA_RefCOCOGaze_Ablation.datasets import ReferGazeDataset, scanvla_collect_fn
 
 from projects.ScanVLA_RefCOCOGaze_Ablation.models.ScanVLA_decoder import TransformerDecoderWrapper
@@ -23,9 +23,9 @@ from projects.ScanVLA_RefCOCOGaze_Ablation.models.ScanVLA_decoder import Transfo
 #                          PART 1  Settings                           #
 #######################################################################
 # Model
-path = '/data/lyt/03-Repositories/02-others/03-MultiModality/Qwen3-VL-2B-Instruct'
-# pretrained_pth = None
-pretrained_pth = 'pretrained/model_qwen_2b.pth'
+path = 'pretrained/InternVL3-1B'
+pretrained_pth = None
+# pretrained_pth = 'pretrained/model_internvl3_2b.pth'
 
 # Data
 template = "qwen_chat"
@@ -36,10 +36,13 @@ max_length = 8192
 # batch_size = 8  # per_device
 batch_size = 1  # per_device
 
-accumulative_counts = 64
-dataloader_num_workers = 64
+# accumulative_counts = 64
+# dataloader_num_workers = 64
 
-max_epochs = 8
+accumulative_counts = 1
+dataloader_num_workers = 1
+
+max_epochs = 6
 
 optim_type = AdamW
 # official 1024 -> 4e-5
@@ -74,7 +77,7 @@ model = dict(
     training_bs=batch_size,
     special_tokens=special_tokens,
     pretrained_pth=pretrained_pth,
-    arch_type='qwen',
+    # arch_type='qwen',
     decoder=dict(
         type=TransformerDecoderWrapper,
         activation="relu",
@@ -85,25 +88,22 @@ model = dict(
         dropout_mlp = 0.15,
         num_decoder_layers=6,
         max_len=4,
-        input_dim=2048, # qwen3vl的内部维度
+        input_dim=896,
         args=None,
     ),
     mllm=dict(
-        type=Qwen3VL,
+        type=InternVLMLLM,
         model_path=path,
         freeze_llm=True,
         freeze_visual_encoder=True,
         llm_lora=dict(
             type=LoraConfig,
-            # r=128,
-            # lora_alpha=256,
             r=16,
             lora_alpha=32,
             lora_dropout=0.05,
             bias='none',
             task_type='CAUSAL_LM',
-            modules_to_save=['lm_head', 'embed_tokens'],
-            target_modules=None,
+            modules_to_save=["embed_tokens", "lm_head"]
         ),
     ),
     tokenizer=tokenizer,
@@ -131,12 +131,6 @@ scanvla_default_dataset_configs=dict(
     extra_image_processor=extra_image_processor,
     prompt_template=prompt_template,
     max_length=max_length,
-    arch_type='qwen',
-    preprocessor=dict(
-        type=Qwen3VLProcessor.from_pretrained,
-        pretrained_model_name_or_path=path,
-        trust_remote_code=True,
-    )
 )
 
 refcoco_gaze_dataset=dict(

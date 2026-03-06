@@ -8,11 +8,17 @@ import os
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert HF to PTH script')
-    parser.add_argument('hf_model_path', help='path to HF model directory')
+    # parser.add_argument('--hf_model_path', default="/data/lyt/03-Repositories/02-others/03-MultiModality/Sa2VA-Qwen3-VL-4B/", help='path to HF model directory')
+    # parser.add_argument(
+    #     '--save-path', type=str, default="/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/pretrained/model_qwen_4b.pth", help='save path for PTH model')
+    # parser.add_argument(
+    #     '--arch-type', type=str, default='qwen', choices=['internvl', 'qwen'],
+    #     help='Model architecture type')
+    parser.add_argument('--hf_model_path', default="/data/lyt/03-Repositories/02-others/03-MultiModality/Sa2VA-InternVL3-2B/", help='path to HF model directory')
     parser.add_argument(
-        '--save-path', type=str, default=None, help='save path for PTH model')
+        '--save-path', type=str, default="/data/lyt/03-Repositories/01-ours/ScanVLA/ScanVLA-main/pretrained/model_internvl3_2b.pth", help='save path for PTH model')
     parser.add_argument(
-        '--arch-type', type=str, required=True, choices=['internvl', 'qwen'],
+        '--arch-type', type=str, default='internvl', choices=['internvl', 'qwen'],
         help='Model architecture type')
     args = parser.parse_args()
     return args

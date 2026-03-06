@@ -40,15 +40,18 @@ class TransformerDecoderWrapper(nn.Module):
                 dropout_mlp = 0.15,
                 num_decoder_layers=6, 
                 max_len=4, 
+                input_dim=2048,
                 torch_dtype=torch.bfloat16, 
                 args=None):
         super().__init__()
         self.hidden_dim = hidden_dim
+        self.input_dim=input_dim
 
         decoder_layer = TransformerDecoderLayer(d_model = self.hidden_dim, nhead = nhead, dim_feedforward = dim_feedforward,
-                                                dropout_attn = dropout_attn, dropout_mlp = dropout_mlp)
+                                                dropout_attn = dropout_attn, dropout_mlp = dropout_mlp, input_dim=self.input_dim)
         
-        final_layer = FinalLayer(2048, hidden_dim) # Diffusion-Planner的Finallayer
+        final_layer = FinalLayer(self.input_dim, hidden_dim) # Diffusion-Planner的Finallayer
+        # final_layer = None
 
         # decoder_norm = nn.LayerNorm(self.hidden_dim)
         decoder_norm = None
@@ -101,9 +104,6 @@ class TransformerDecoderWrapper(nn.Module):
 
         # 查询信息和历史注视点编码和vl_guidance_feats融合
         querypos_embed = self.query_embed.weight.unsqueeze(1)
-        # querypos_embed = self.query_pos_embed_fixed.unsqueeze(1).to(self.query_embed.weight.device)
-        # visionpos_embed = self.xy_embed_fixed
-        # visionpos_embed = self.xy_embed.weight.unsqueeze(1)
         visionpos_embed = None
 
         output = self.decoder(query,
@@ -162,13 +162,15 @@ class TransformerDecoder(nn.Module):
 
 class TransformerDecoderLayer(nn.Module):
 
-    def __init__(self, d_model=256, nhead=8, dim_feedforward=1024, dropout_attn=0.1, dropout_mlp=0.15, torch_dtype=torch.bfloat16):
+    def __init__(self, d_model=256, nhead=8, dim_feedforward=1024, dropout_attn=0.1, dropout_mlp=0.15, input_dim=2048, torch_dtype=torch.bfloat16):
         super().__init__()
         self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout_attn)
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout_attn)
 
-        self.norm_vl = nn.LayerNorm(2048, eps=1e-5) #对vl_feature进行LN
-        self.norm_vision = nn.LayerNorm(2048, eps=1e-5) #对vision feature进行LN
+        self.input_dim=input_dim
+
+        self.norm_vl = nn.LayerNorm(self.input_dim, eps=1e-5) #对vl_feature进行LN
+        self.norm_vision = nn.LayerNorm(self.input_dim, eps=1e-5) #对vision feature进行LN
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
@@ -178,7 +180,7 @@ class TransformerDecoderLayer(nn.Module):
 
         self.Linear_vl = nn.Sequential(
             nn.SiLU(),
-            nn.Linear(2048, d_model, bias=True)
+            nn.Linear(self.input_dim, d_model, bias=True)
         )
 
         # adaLN调制模块
@@ -190,7 +192,7 @@ class TransformerDecoderLayer(nn.Module):
         # 将视觉token转换
         self.Linear_vision = nn.Sequential(
             nn.SiLU(),
-            nn.Linear(2048, d_model, bias=True)
+            nn.Linear(self.input_dim, d_model, bias=True)
         )
 
         approx_gelu = lambda: nn.GELU(approximate="tanh")
@@ -277,5 +279,3 @@ class FinalLayer(nn.Module):
         x = modulate(self.norm_final(x), shift, scale)
         x = self.proj(x)
         return x
-
-

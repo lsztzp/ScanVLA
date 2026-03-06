@@ -13,16 +13,10 @@ from mmengine.config import Config, ConfigDict
 from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
-# import torch.nn.functional as F
 import torchvision.transforms as T
 from torchvision.transforms.functional import InterpolationMode
-from pycocotools.coco import COCO
-from pycocotools import mask as mask_utils
 
 from xtuner.registry import BUILDER
-from xtuner.utils import IGNORE_INDEX
-from xtuner.dataset.utils import encode_fn
-from xtuner.dataset.map_fns import llava_map_fn
 
 from os.path import join
 import torchvision.transforms.functional as F
@@ -63,13 +57,6 @@ def pos_to_fixation(offset_mapping,text_description):
 
 def pre_process(refgazes, max_lm_length=32, max_pack_length=4):
     for refgaze in refgazes:
-        # refgaze['CAPTION'] = ' '.join([bos_token,refgaze['REF_SENTENCE'],eos_token])
-        # refgaze['CAPTION'] = refgaze['REF_SENTENCE']
-
-        # a = refgaze['REF_SENTENCE'].strip()
-        # if a!= refgaze['REF_SENTENCE'] or 'right couch closest' in refgaze['REF_SENTENCE']:
-        #     print(1)
-
         refgaze['REF_SENTENCE'] = '<|object_ref_start|> ' + refgaze['REF_SENTENCE'].strip() + '<|object_ref_end|>'
 
         pack_x, pack_y = refgaze['PACK_X'], refgaze['PACK_Y']
@@ -155,18 +142,6 @@ class ReferGazeDataset(Sa2VABaseDataset):
             self.fixs = train_refgazes
         else:
             self.fixs = fixs 
-
-        
-        # zero_num, one_num =0,0
-        # for x in self.fixs:
-        #     length = x['PACK']+1
-        #     tmp = x['fixation_x'][:length]
-        #     tmp = np.array(tmp)
-        #     zero_num += np.sum(tmp == 0)
-        #     one_num += np.sum(tmp != 0)
-
-        # # ratio = zero_num / one_num
-        # ratio = one_num /zero_num
         
         self.begin_str = f'{DEFAULT_IMAGE_TOKEN}\n'
         if extra_image_processor is not None:
@@ -239,7 +214,6 @@ class ReferGazeDataset(Sa2VABaseDataset):
 
     def _parse_annotations(self, fix):
         image_path = join(self.img_dir, fix['IMAGEFILE'])
-        # image = Image.open(image_path).convert('RGB')
         
         text = [fix['REF_SENTENCE']]
         phrases = []
@@ -323,9 +297,6 @@ class ReferGazeDataset(Sa2VABaseDataset):
     
     def _rand_another(self) -> int:
         return np.random.randint(0, len(self.data))
-
-
-
     
     def __len__(self):
         return len(self.fixs)

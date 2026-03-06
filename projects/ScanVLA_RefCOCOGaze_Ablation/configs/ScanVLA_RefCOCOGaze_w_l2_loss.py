@@ -10,14 +10,14 @@ from xtuner.utils import PROMPT_TEMPLATE
 
 from peft import LoraConfig
 
-from torch.nn import L1Loss, NLLLoss
+from torch.nn import L1Loss, NLLLoss, MSELoss
 from mmengine.visualization import Visualizer, TensorboardVisBackend
-from projects.ScanVLA_RefCOCOGaze.models.mllm.qwen3vl import Qwen3VL
+from projects.ScanVLA_RefCOCOGaze_Ablation.models.mllm.qwen3vl import Qwen3VL
 
-from projects.ScanVLA_RefCOCOGaze.models import ScanVLAModel, DirectResize
-from projects.ScanVLA_RefCOCOGaze.datasets import ReferGazeDataset, scanvla_collect_fn
+from projects.ScanVLA_RefCOCOGaze_Ablation.models import ScanVLAModel, DirectResize
+from projects.ScanVLA_RefCOCOGaze_Ablation.datasets import ReferGazeDataset, scanvla_collect_fn
 
-from projects.ScanVLA_RefCOCOGaze.models.ScanVLA_decoder import TransformerDecoderWrapper
+from projects.ScanVLA_RefCOCOGaze_Ablation.models.ScanVLA_decoder import TransformerDecoderWrapper
 
 #######################################################################
 #                          PART 1  Settings                           #
@@ -85,7 +85,7 @@ model = dict(
         dropout_mlp = 0.15,
         num_decoder_layers=6,
         max_len=4,
-        input_dim=2048, # qwen3vl-2b的内部维度, 切换为其他模型时需要相对应改变
+        input_dim=2048, # qwen3vl的内部维度
         args=None,
     ),
     mllm=dict(
@@ -108,7 +108,7 @@ model = dict(
     ),
     tokenizer=tokenizer,
     loss_fn_xy = dict(
-        type=L1Loss,
+        type=MSELoss,
         reduction='none',
         ),
     loss_fn_token = dict(

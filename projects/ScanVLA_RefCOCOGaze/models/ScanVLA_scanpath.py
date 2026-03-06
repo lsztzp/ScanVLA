@@ -74,15 +74,13 @@ class ScanVLAModel(BaseModel):
                 input_embeddings = self.mllm.model.get_input_embeddings()
                 lm_head.weight = nn.Parameter(input_embeddings.weight.clone())
 
-        self.activation = F.relu
+        # self.activation = F.relu
+        self.activation = F.sigmoid
+
         self.softmax = nn.LogSoftmax(dim=-1)
 
-        self.loss_fn_xy = BUILDER.build(loss_fn_xy)  
-        self.loss_fn_token = BUILDER.build(loss_fn_token) 
-
-        # no_mask_num=124091, mask_num=336833
-        # weights = torch.tensor([1.0, 0.36840511470075676])
-        # self.loss_fn_token = torch.nn.NLLLoss(weight=weights)
+        self.loss_fn_xy = BUILDER.build(loss_fn_xy)  #1 
+        self.loss_fn_token = BUILDER.build(loss_fn_token) #1
         
         self.torch_dtype = torch_dtype
 
@@ -110,6 +108,7 @@ class ScanVLAModel(BaseModel):
         # del pretrained_state_dict
 
         # 暂时先不训练
+        # self.mllm.use_llm_lora=True
         if self.mllm.use_llm_lora:
             self.mllm.manual_prepare_llm_for_lora()
 
@@ -236,8 +235,8 @@ class ScanVLAModel(BaseModel):
         y_mu = self.activation(y_mu)  #(B,L,4)
         token_predict = self.softmax(token_predict) #(B,L,4,2)
  
-        x_mu = torch.clamp(x_mu, min=0, max=512 - 1)  
-        y_mu = torch.clamp(y_mu, min=0, max=320 - 1)
+        x_mu = x_mu * 512
+        y_mu = y_mu * 320
 
         batch_size = x_mu.shape[0] 
         truncate_len = ref_offset_mask.sum(dim=1)
@@ -248,7 +247,6 @@ class ScanVLAModel(BaseModel):
         selected_token_predict = token_predict[ref_offset_mask.bool().unsqueeze(-1).expand_as(token_predict)]
         
         # 真实值的XY长度需要裁剪
-        # truncate_len = selected_scanpaths_x.shape[1]
         gt_scanpath_x = data.pop('scanpath_x', None) #(1,16,4)
         gt_scanpath_y = data.pop('scanpath_y',None) #(1,16,4)
         gt_scanpath_x = gt_scanpath_x[:,:truncate_len,:]
@@ -260,13 +258,21 @@ class ScanVLAModel(BaseModel):
         # #regloss
         no_zero_pos_mask = torch.logical_not(gt_scanpath_x_flatten == 0)
         fixation_cnt = no_zero_pos_mask.sum() + 1e-5
+
+        # target_dtype = torch.bfloat16
+        # # 2. 转换预测值、标签、掩码为目标 dtype
+        # selected_scanpaths_x = selected_scanpaths_x.to(dtype=target_dtype)
+        # selected_scanpaths_y = selected_scanpaths_y.to(dtype=target_dtype)
+        # gt_scanpath_x_flatten = gt_scanpath_x_flatten.to(dtype=target_dtype)
+        # gt_scanpath_y_flatten = gt_scanpath_y_flatten.to(dtype=target_dtype)
+        # no_zero_pos_mask = no_zero_pos_mask.to(dtype=target_dtype)
+
         loss_xy = ((self.loss_fn_xy(selected_scanpaths_x, gt_scanpath_x_flatten) + self.loss_fn_xy(selected_scanpaths_y,
                                                                                       gt_scanpath_y_flatten)) * no_zero_pos_mask).sum() / fixation_cnt
         
         # token_loss
         token_gt = (gt_scanpath_x == 0).long() 
 
-        # 是否需要给较少的一类加权，如何加权？
         # a = selected_token_predict.reshape(batch_size, -1, 2).permute(0, 2, 1)
         # b = token_gt.flatten(1).long()
         loss_token = self.loss_fn_token(selected_token_predict.reshape(batch_size, -1, 2).permute(0, 2, 1),
@@ -275,8 +281,6 @@ class ScanVLAModel(BaseModel):
         loss_dict = {
             'loss_xy': loss_xy,
             'loss_token': loss_token * 10,
-            'llm_loss': output.loss,
+            # 'llm_loss': output.loss,
         }
         return loss_dict
-
-

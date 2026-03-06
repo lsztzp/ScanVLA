@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+            {
+            // "name": "Python: TorchRun",
+            "name": "Python: Single GPU",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "purpose": ["debug-in-terminal"],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+            // 在需要调试时，取消下面 "args" 的注释，并根据需要修改配置文件路径
+            // "args": [
+            //     // "projects/ScanVLA_LN/configs/ScanVLA_LN.py",
+            //     // "projects/ScanVLA_RefCOCOGaze_Ablation/configs/ScanVLA_RefCOCOGaze_internvl3_2b.py",
+            //     "projects/ScanVLA_RefCOCOGaze_Ablation/configs/ScanVLA_RefCOCOGaze_internvl3_1b.py",
+            //     "--deepspeed", "deepspeed_zero2"
+            // ]
+            }
+        ]
+}

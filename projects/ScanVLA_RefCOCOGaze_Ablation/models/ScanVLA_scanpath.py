@@ -108,6 +108,7 @@ class ScanVLAModel(BaseModel):
         # del pretrained_state_dict
 
         # 暂时先不训练
+        # self.mllm.use_llm_lora=True
         if self.mllm.use_llm_lora:
             self.mllm.manual_prepare_llm_for_lora()
 
@@ -257,6 +258,15 @@ class ScanVLAModel(BaseModel):
         # #regloss
         no_zero_pos_mask = torch.logical_not(gt_scanpath_x_flatten == 0)
         fixation_cnt = no_zero_pos_mask.sum() + 1e-5
+
+        target_dtype = torch.bfloat16
+        # 2. 转换预测值、标签、掩码为目标 dtype
+        selected_scanpaths_x = selected_scanpaths_x.to(dtype=target_dtype)
+        selected_scanpaths_y = selected_scanpaths_y.to(dtype=target_dtype)
+        gt_scanpath_x_flatten = gt_scanpath_x_flatten.to(dtype=target_dtype)
+        gt_scanpath_y_flatten = gt_scanpath_y_flatten.to(dtype=target_dtype)
+        no_zero_pos_mask = no_zero_pos_mask.to(dtype=target_dtype)
+
         loss_xy = ((self.loss_fn_xy(selected_scanpaths_x, gt_scanpath_x_flatten) + self.loss_fn_xy(selected_scanpaths_y,
                                                                                       gt_scanpath_y_flatten)) * no_zero_pos_mask).sum() / fixation_cnt
         

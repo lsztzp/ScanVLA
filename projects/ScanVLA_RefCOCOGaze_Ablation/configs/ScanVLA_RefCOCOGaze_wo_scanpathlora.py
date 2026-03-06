@@ -12,12 +12,12 @@ from peft import LoraConfig
 
 from torch.nn import L1Loss, NLLLoss
 from mmengine.visualization import Visualizer, TensorboardVisBackend
-from projects.ScanVLA_RefCOCOGaze.models.mllm.qwen3vl import Qwen3VL
+from projects.ScanVLA_RefCOCOGaze_Ablation.models.mllm.qwen3vl import Qwen3VL
 
-from projects.ScanVLA_RefCOCOGaze.models import ScanVLAModel, DirectResize
-from projects.ScanVLA_RefCOCOGaze.datasets import ReferGazeDataset, scanvla_collect_fn
+from projects.ScanVLA_RefCOCOGaze_Ablation.models import ScanVLAModel, DirectResize
+from projects.ScanVLA_RefCOCOGaze_Ablation.datasets import ReferGazeDataset, scanvla_collect_fn
 
-from projects.ScanVLA_RefCOCOGaze.models.ScanVLA_decoder import TransformerDecoderWrapper
+from projects.ScanVLA_RefCOCOGaze_Ablation.models.ScanVLA_decoder import TransformerDecoderWrapper
 
 #######################################################################
 #                          PART 1  Settings                           #
@@ -85,7 +85,7 @@ model = dict(
         dropout_mlp = 0.15,
         num_decoder_layers=6,
         max_len=4,
-        input_dim=2048, # qwen3vl-2b的内部维度, 切换为其他模型时需要相对应改变
+        input_dim=2048, # qwen3vl的内部维度
         args=None,
     ),
     mllm=dict(
@@ -93,18 +93,19 @@ model = dict(
         model_path=path,
         freeze_llm=True,
         freeze_visual_encoder=True,
-        llm_lora=dict(
-            type=LoraConfig,
-            # r=128,
-            # lora_alpha=256,
-            r=16,
-            lora_alpha=32,
-            lora_dropout=0.05,
-            bias='none',
-            task_type='CAUSAL_LM',
-            modules_to_save=['lm_head', 'embed_tokens'],
-            target_modules=None,
-        ),
+        # llm_lora=dict(
+        #     type=LoraConfig,
+        #     # r=128,
+        #     # lora_alpha=256,
+        #     r=16,
+        #     lora_alpha=32,
+        #     lora_dropout=0.05,
+        #     bias='none',
+        #     task_type='CAUSAL_LM',
+        #     modules_to_save=['lm_head', 'embed_tokens'],
+        #     target_modules=None,
+        # ),
+        llm_lora=None,
     ),
     tokenizer=tokenizer,
     loss_fn_xy = dict(
