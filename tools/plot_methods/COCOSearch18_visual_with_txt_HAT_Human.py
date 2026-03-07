@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 warnings.filterwarnings("ignore")
 
+# 针对HAT和human的轨迹采用以下代码可视化
 def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, text=None):
     image = Image.open(img_path).convert("RGB")
     image = image.resize((img_width, img_height), resample=Image.Resampling.LANCZOS)
@@ -23,13 +24,11 @@ def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, 
     plt.imshow(image)
     plt.axis("off")
 
-    ys = scanpaths[:,0]
-    xs = scanpaths[:,1]
+    # ys = scanpaths[:,0]
+    # xs = scanpaths[:,1]
+    xs = [x for x in scanpaths['X']]
+    ys = [x for x in scanpaths['Y']]
     # ts = scanpaths[:,2]
-
-    # cir_rad_min, cir_rad_max = 10,18
-    # min_T, max_T = np.min(ts), np.max(ts)
-    # rad_per_T = (cir_rad_max - cir_rad_min) / float(max_T - min_T)
 
     linewidth = 4
     for i in range(len(xs)):
@@ -112,38 +111,19 @@ def plot_scanpath(img_path,scanpaths,save_path="",img_height=320,img_width=512, 
     plt.close()
 
 
-
 if __name__ == '__main__':
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/coco_search18/raw/COCOSearch18/images/'
     
-    # path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_COCOSearch18_infered.pt'
-    # save_root = './tools/ploted_images/qualitative_compare_images/COCOSearch18/Ours_with_txt'
+    scanpath_dir = "/data/lyt/02-Results/01-ScanPath/ClipGaze/compare_results/Human/"
+    save_root = "./tools/ploted_images/qualitative_compare_images/COCOSearch18/human_with_txt"
+    for cartogories in tqdm(os.listdir(scanpath_dir)):
+        car_path=scanpath_dir+cartogories+'/'
+        for file in os.listdir(car_path):
+            path = car_path + file
+            image_path = image_root + cartogories.replace(' ', '_') + '/' + file.split('.')[0]+'.jpg'
+            scanpath = torch.load(path)
+            save_path = join(save_root, cartogories, file.split('.')[0]+'.jpg')
 
-    # path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/Others/COCOSearch18_CLIPGaze_infered.pt'
-    # save_root = './tools/ploted_images/qualitative_compare_images/COCOSearch18/CLIPGaze_with_txt'
-
-    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/Others/COCOSearch18_Gazeformer_infered.pt'
-    save_root = './tools/ploted_images/qualitative_compare_images/COCOSearch18/Gazeformer_with_txt'
-
-    scanpaths = torch.load(path)
-
-    # arr = []
-    for task_name, name, condition, idx, scanpath in tqdm(scanpaths):
-        image_id = int(name.split('.')[0])
-
-        image_path = join(image_root, task_name.replace(' ', '_'), name)
-        save_path = join(save_root, task_name.replace(' ', '_'), name)
-
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-
-        if os.path.exists(save_path):
-            continue
-        parent_folder = Path(save_path).parent  
-        # 父文件夹
-        if not parent_folder.is_dir():
-            parent_folder.mkdir(parents=True, exist_ok=True)
-
-        text = [task_name]
-        plot_scanpath(image_path,scanpath,save_path,320,512, text)
-
-    print('done')
+            text = [cartogories]
+            plot_scanpath(image_path,scanpath,save_path,320,512, text)
+    print('done!')

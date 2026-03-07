@@ -124,9 +124,15 @@ def plot_scanpath(img_path, xs, ys, save_path="",img_height=320,img_width=512, b
 
 
 if __name__=='__main__':
-    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_RefCOCOGaze_infered.pt'
     image_root = '/data/lyt/01-Datasets/01-ScanPath-Datasets/ART_data/data/images_512X320/'
-    save_root = './tools/ploted_images/qualitative_compare_images/RefCOCOGaze/Ours_with_text'
+    # path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/ScanVLA_RefCOCOGaze_infered.pt'
+    # save_root = './tools/ploted_images/qualitative_compare_images/RefCOCOGaze/Ours_with_text'
+
+    # path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/Others/RefCOCOGaze_ART_infered.pt'
+    # save_root = 'tools/ploted_images/qualitative_compare_images/RefCOCOGaze/ART_with_text'
+
+    path = 'tools/ploted_images/qualitative_compare_infered_scanpaths/Others/RefCOCOGaze_Human_infered.pt'
+    save_root = 'tools/ploted_images/qualitative_compare_images/RefCOCOGaze/Human_with_text'
 
     scanpaths = torch.load(path)
 
@@ -139,18 +145,21 @@ if __name__=='__main__':
         bbox = elem['BBOX']
         text = elem['TEXT']
 
-        save_path = os.path.join(save_root, image_path)
+        save_path = os.path.join(save_root, str(cnt) + '_' + image_path)
+        cnt +=1 
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         
         if os.path.exists(save_path):
             continue
-        cnt+=1
 
-        text = text[:-18] + ' [EOT]'
+        # 针对我们的pth文件，打开以下代码
+        # text = text[:-18] + ' [EOT]'
+        # text = text.split(' ')
+        # text[0], text[-1] = '[BOT]', '[EOT]'
+
         text = text.split(' ')
-        text[0], text[-1] = '[BOT]', '[EOT]'
+        text = ['[BOT]'] + text + ['[EOT]']
         plot_scanpath(image_root + image_path, xs= X, ys = Y, bbox=bbox, save_path=save_path, text=text)
         print(image_path)
 
     print('done')
-
